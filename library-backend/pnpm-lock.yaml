@@ -3,10 +3,12 @@ lockfileVersion: 5.3
 specifiers:
   apollo-server: ^2.24.0
   graphql: ^15.5.0
+  uuid: ^8.3.2
 
 dependencies:
   apollo-server: 2.24.0_graphql@15.5.0
   graphql: 15.5.0
+  uuid: 8.3.2
 
 packages:
 
