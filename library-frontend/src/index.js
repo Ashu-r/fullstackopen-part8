@@ -9,6 +9,10 @@ const client = new ApolloClient({
 	link: new HttpLink({
 		uri: 'http://localhost:4000',
 	}),
+	onError: ({ networkError, graphQLErrors }) => {
+		console.log('graphQLErrors', graphQLErrors);
+		console.log('networkError', networkError);
+	},
 });
 
 ReactDOM.render(
