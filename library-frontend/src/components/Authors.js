@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-import { gql, useQuery } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 
 export const ALL_AUTHORS = gql`
 	query {
@@ -13,8 +13,30 @@ export const ALL_AUTHORS = gql`
 	}
 `;
 
+const EDIT_AUTHOR = gql`
+	mutation editAuthor($name: String!, $setBornTo: Int!) {
+		editAuthor(name: $name, setBornTo: $setBornTo) {
+			name
+			id
+			born
+		}
+	}
+`;
+
 const Authors = (props) => {
+	const [name, setName] = useState('');
+	const [born, setBorn] = useState(null);
+
 	const allAuthors = useQuery(ALL_AUTHORS);
+	const [editAuthor] = useMutation(EDIT_AUTHOR);
+
+	const submit = async (event) => {
+		event.preventDefault();
+
+		editAuthor({ variables: { name, setBornTo: born } });
+		setName('');
+		setBorn('');
+	};
 
 	if (!props.show) {
 		return null;
@@ -45,6 +67,19 @@ const Authors = (props) => {
 					))}
 				</tbody>
 			</table>
+
+			<h3>Set Birth Year</h3>
+			<form onSubmit={submit}>
+				<div>
+					name
+					<input value={name} onChange={({ target }) => setName(target.value)} />
+				</div>
+				<div>
+					born
+					<input value={born} onChange={({ target }) => setBorn(parseInt(target.value, 10))} />
+				</div>
+				<button type='submit'>save</button>
+			</form>
 		</div>
 	);
 };
