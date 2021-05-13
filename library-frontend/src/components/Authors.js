@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Select from 'react-select';
 
 import { gql, useMutation, useQuery } from '@apollo/client';
 
@@ -25,7 +26,7 @@ const EDIT_AUTHOR = gql`
 
 const Authors = (props) => {
 	const [name, setName] = useState('');
-	const [born, setBorn] = useState(null);
+	const [born, setBorn] = useState('');
 
 	const allAuthors = useQuery(ALL_AUTHORS);
 	const [editAuthor] = useMutation(EDIT_AUTHOR);
@@ -33,8 +34,8 @@ const Authors = (props) => {
 	const submit = async (event) => {
 		event.preventDefault();
 
-		editAuthor({ variables: { name, setBornTo: born } });
-		setName('');
+		editAuthor({ variables: { name: name.value, setBornTo: born } });
+		setName(null);
 		setBorn('');
 	};
 
@@ -47,6 +48,8 @@ const Authors = (props) => {
 	}
 
 	const authors = allAuthors.data.allAuthors;
+
+	const options = authors.map((a) => ({ value: a.name, label: a.name }));
 
 	return (
 		<div>
@@ -72,13 +75,13 @@ const Authors = (props) => {
 			<form onSubmit={submit}>
 				<div>
 					name
-					<input value={name} onChange={({ target }) => setName(target.value)} />
+					<Select defaultValue={name} onChange={setName} options={options} />
 				</div>
 				<div>
 					born
 					<input value={born} onChange={({ target }) => setBorn(parseInt(target.value, 10))} />
 				</div>
-				<button type='submit'>save</button>
+				<button type='submit'>update</button>
 			</form>
 		</div>
 	);
