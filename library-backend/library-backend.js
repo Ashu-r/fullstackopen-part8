@@ -103,7 +103,7 @@ const resolvers = {
 				}
 				const book = new Book({ ...args, author: newAuthor });
 				try {
-					book.save();
+					await book.save();
 				} catch (error) {
 					throw new UserInputError(error.message, { invalidArgs: args });
 				}
@@ -111,7 +111,7 @@ const resolvers = {
 			}
 			const book = new Book({ ...args, author });
 			try {
-				book.save();
+				await book.save();
 			} catch (error) {
 				throw new UserInputError(error.message, { invalidArgs: args });
 			}
@@ -127,7 +127,7 @@ const resolvers = {
 			if (author) {
 				author.born = args.setBornTo;
 				try {
-					author.save();
+					await author.save();
 				} catch (error) {
 					throw new UserInputError(error.message, { invalidArgs: args });
 				}
@@ -148,12 +148,10 @@ const resolvers = {
 			if (!user || args.password !== 'secret') {
 				throw new UserInputError('wrong credentials');
 			}
-
 			const userForToken = {
 				username: user.username,
-				id: user.__id,
+				id: user._id,
 			};
-
 			return { value: jwt.sign(userForToken, JWT_SECRET) };
 		},
 	},
@@ -167,7 +165,6 @@ const server = new ApolloServer({
 
 		if (auth && auth.toLowerCase().startsWith('bearer ')) {
 			const decodedToken = jwt.verify(auth.substring(7), JWT_SECRET);
-
 			const currentUser = await User.findById(decodedToken.id);
 			return { currentUser };
 		}
