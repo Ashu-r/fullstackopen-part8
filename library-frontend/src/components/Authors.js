@@ -7,14 +7,18 @@ import { ALL_AUTHORS, EDIT_AUTHOR } from '../queries';
 const Authors = (props) => {
 	const [name, setName] = useState('');
 	const [born, setBorn] = useState('');
-
 	const allAuthors = useQuery(ALL_AUTHORS);
-	const [editAuthor] = useMutation(EDIT_AUTHOR);
+	const [editAuthor] = useMutation(EDIT_AUTHOR, {
+		onError: (error) => {
+			console.log(error);
+			props.setError(error.graphQLErrors[0].message);
+		},
+	});
 
 	const submit = async (event) => {
 		event.preventDefault();
 
-		editAuthor({ variables: { name: name.value, setBornTo: born } });
+		await editAuthor({ variables: { name: name.value, setBornTo: born } });
 		setName(null);
 		setBorn('');
 	};
