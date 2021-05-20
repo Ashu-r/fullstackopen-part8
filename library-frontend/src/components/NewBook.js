@@ -7,10 +7,14 @@ const NewBook = (props) => {
 	const [author, setAuhtor] = useState('');
 	const [published, setPublished] = useState('');
 	const [genre, setGenre] = useState('');
-	const [genres, setGenres] = useState(['']);
+	const [genres, setGenres] = useState([]);
 
 	const [addBook] = useMutation(ADD_BOOK, {
-		refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }],
+		update: (store, response) => {
+			const dataInStore = store.readQuery({ query: ALL_BOOKS }, { query: ALL_AUTHORS });
+			store.writeQuery({ query: ALL_BOOKS, data: { ...dataInStore, allBooks: [...dataInStore.allBooks, response.data.addBook] } });
+		},
+		refetchQueries: [{ query: ALL_AUTHORS }],
 		onError: (error) => {
 			error.graphQLErrors[0] ? props.setError(error.graphQLErrors[0].message) : props.setError('Please check all the fields');
 		},
@@ -24,7 +28,7 @@ const NewBook = (props) => {
 		event.preventDefault();
 
 		console.log('add book...');
-		await addBook({ variables: { title, published, author, genres } });
+		await addBook({ variables: { title, published, author, genres: genres.length > 0 ? genres : null } });
 
 		setTitle('');
 		setPublished('');
@@ -34,8 +38,10 @@ const NewBook = (props) => {
 	};
 
 	const addGenre = () => {
-		setGenres(genres.concat(genre));
-		setGenre('');
+		if (genre) {
+			setGenres(genres.concat(genre));
+			setGenre('');
+		}
 	};
 
 	return (
