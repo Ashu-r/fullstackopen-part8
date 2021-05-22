@@ -1,12 +1,11 @@
-const { UserInputError } = require('apollo-server');
-const { ApolloServer, gql } = require('apollo-server');
+const { UserInputError, ApolloServer, gql, AuthenticationError, PubSub } = require('apollo-server');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const Author = require('./models/author');
 const Book = require('./models/book');
 const User = require('./models/user');
-const { AuthenticationError } = require('apollo-server');
 
+const pubsub = new PubSub();
 const JWT_SECRET = 'JWTsecret';
 const MONGO_URI = 'mongodb+srv://ashu:ashudive@fso-phonebook.aaxdo.gcp.mongodb.net/fso-library?retryWrites=true&w=majority';
 
@@ -16,6 +15,8 @@ mongoose
 		console.log('Connected to momngoDb');
 	})
 	.catch((e) => console.log('Error connecting to mongodb', error.message));
+
+mongoose.set('debug', true);
 
 const typeDefs = gql`
 	type User {
@@ -54,6 +55,9 @@ const typeDefs = gql`
 		createUser(username: String!, favoriteGenre: String!): User
 		login(username: String!, password: String!): Token
 	}
+	type Subscription {
+		bookAdded: Book!
+	}
 `;
 
 const resolvers = {
@@ -78,12 +82,6 @@ const resolvers = {
 			return context.currentUser;
 		},
 	},
-	Author: {
-		bookCount: async (root) => {
-			const author = await Author.findOne({ name: root.name });
-			return Book.find({ author: author }).countDocuments();
-		},
-	},
 	Mutation: {
 		addBook: async (root, args, context) => {
 			const currentUser = context.currentUser;
@@ -93,28 +91,28 @@ const resolvers = {
 			}
 
 			const author = await Author.findOne({ name: args.author });
-
+			const newAuthor = new Author({ name: args.author, bookCount: 1 });
 			if (!author) {
-				const newAuthor = new Author({ name: args.author });
 				try {
 					await newAuthor.save();
 				} catch (error) {
 					throw new UserInputError(error.message, { invalidArgs: args });
 				}
-				const book = new Book({ ...args, author: newAuthor });
+			} else {
+				author.bookCount = author.bookCount + 1;
 				try {
-					await book.save();
+					await author.save();
 				} catch (error) {
 					throw new UserInputError(error.message, { invalidArgs: args });
 				}
-				return book;
 			}
-			const book = new Book({ ...args, author });
+			const book = new Book({ ...args, author: author ? author : newAuthor });
 			try {
 				await book.save();
 			} catch (error) {
 				throw new UserInputError(error.message, { invalidArgs: args });
 			}
+			pubsub.publish('BOOK_ADDED', { bookAdded: book });
 			return book;
 		},
 		editAuthor: async (root, args, context) => {
@@ -155,6 +153,11 @@ const resolvers = {
 			return { value: jwt.sign(userForToken, JWT_SECRET) };
 		},
 	},
+	Subscription: {
+		bookAdded: {
+			subscribe: () => pubsub.asyncIterator(['BOOK_ADDED']),
+		},
+	},
 };
 
 const server = new ApolloServer({
@@ -171,6 +174,7 @@ const server = new ApolloServer({
 	},
 });
 
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
 	console.log(`Server ready at ${url}`);
+	console.log(`Subscitptions ready at ${subscriptionsUrl}`);
 });
